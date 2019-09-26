@@ -22,7 +22,7 @@ int main()
 
 	std::ostream_iterator<int> ostream_it{ std::cout, " " };
 
-	std::cout << "Usual array: ";
+	std::cout << "Array: ";
 	std::copy(std::cbegin(vec), std::cend(vec), ostream_it);
 	std::cout << std::endl;
 
