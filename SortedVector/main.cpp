@@ -20,12 +20,14 @@ int main()
 		sorted_vec.insert(elem);
 	}
 
+	std::ostream_iterator<int> ostream_it{ std::cout, " " };
+
 	std::cout << "Usual array: ";
-	std::copy(std::cbegin(vec), std::cend(vec), std::ostream_iterator<int>(std::cout, " "));
+	std::copy(std::cbegin(vec), std::cend(vec), ostream_it);
 	std::cout << std::endl;
 
 	std::cout << "Sorted array: ";
-	std::copy(std::cbegin(sorted_vec), std::cend(sorted_vec), std::ostream_iterator<int>(std::cout, " "));
+	std::copy(std::cbegin(sorted_vec), std::cend(sorted_vec), ostream_it);
 	std::cout << std::endl;
 
 	system("pause");
