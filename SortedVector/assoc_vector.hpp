@@ -30,18 +30,18 @@ template<
 struct assoc_vector {
 	using inner_container_type = std::vector<std::pair<const Key, T>, Allocator>;
 
-	using value_type				= typename inner_container_type::value_type;
-	using allocator_type			= typename inner_container_type::allocator_type;
-	using size_type					= typename inner_container_type::size_type;
-	using difference_type			= typename inner_container_type::difference_type;
-	using reference					= typename inner_container_type::reference;
-	using const_reference			= typename inner_container_type::const_reference;
-	using pointer					= typename inner_container_type::pointer;
-	using const_pointer				= typename inner_container_type::const_pointer;
-	using iterator					= typename inner_container_type::iterator;
-	using const_iterator			= typename inner_container_type::const_iterator;
-	using reverse_iterator			= typename inner_container_type::reverse_iterator;
-	using const_reverse_iterator	= typename inner_container_type::const_reverse_iterator;
+	using value_type = typename inner_container_type::value_type;
+	using allocator_type = typename inner_container_type::allocator_type;
+	using size_type	= typename inner_container_type::size_type;
+	using difference_type = typename inner_container_type::difference_type;
+	using reference = typename inner_container_type::reference;
+	using const_reference = typename inner_container_type::const_reference;
+	using pointer = typename inner_container_type::pointer;
+	using const_pointer = typename inner_container_type::const_pointer;
+	using iterator = typename inner_container_type::iterator;
+	using const_iterator = typename inner_container_type::const_iterator;
+	using reverse_iterator = typename inner_container_type::reverse_iterator;
+	using const_reverse_iterator = typename inner_container_type::const_reverse_iterator;
 
 	T& operator[](const Key& key)
 	{
