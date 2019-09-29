@@ -2,11 +2,16 @@
 #ifndef SORTED_VECTOR_HPP
 #define SORTED_VECTOR_HPP
 
+#include "typelist_utils.hpp"
+
 #include <vector>
 #include <algorithm>
 
-template<class T, class Comparator = std::less<T>, class Allocator = std::allocator<T>>
-struct sorted_vector {
+template<class T, class Allocator = std::allocator<T>, class... Comparators>
+struct sorted_vector;
+
+template<class T, class Allocator, class Comparator>
+struct sorted_vector<T, Allocator, Comparator> {
 	using inner_container_type = std::vector<T, Allocator>;
 
 	using value_type = typename inner_container_type::value_type;
@@ -96,9 +101,61 @@ private:
 	inner_container_type cont_;
 };
 
-namespace std {
-	template<class T, class Comparator, class Allocator>
-	void swap(sorted_vector<T, Comparator, Allocator>& left, sorted_vector<T, Comparator, Allocator>& right) { left.swap(right); }
-}
+
+template<class T, class Allocator, class... Comparators>
+struct sorted_vector {
+	using inner_container_type = std::vector<T, Allocator>;
+
+	using value_type = typename inner_container_type::value_type;
+	using allocator_type = typename inner_container_type::allocator_type;
+	using size_type = typename inner_container_type::size_type;
+	using difference_type = typename inner_container_type::difference_type;
+	using reference = typename inner_container_type::reference;
+	using const_reference = typename inner_container_type::const_reference;
+	using pointer = typename inner_container_type::pointer;
+	using const_pointer = typename inner_container_type::const_pointer;
+	using iterator = typename inner_container_type::iterator;
+	using const_iterator = typename inner_container_type::const_iterator;
+	using reverse_iterator = typename inner_container_type::reverse_iterator;
+	using const_reverse_iterator = typename inner_container_type::const_reverse_iterator;
+
+public:
+	explicit sorted_vector() : sortedIndexes_ { sizeof...(Comparators) } {}
+
+	auto insert(const T& val) { elems_.push_back(val); insert_to_sorted(elems_.back()); }
+	auto insert(T&& val) { elems_.push_back(std::move(val)); insert_to_sorted(elems_.back());}
+	
+	template<class... Args>
+	auto emplace(Args&&... args) { elems_.emplace_back(std::forward<Args>(args)...); insert_to_sorted(elems_.back()); }
+
+private:
+
+	template<class CurrComp>
+	bool for_every_of(std::size_t& currIndex)
+	{
+		auto& currIndexes = sortedIndexes_.at(currIndex);
+
+		const auto compareByValues = [this](std::size_t left, std::size_t right) {
+			CurrComp comp;
+			return comp(elems_.at(left), elems_.at(right));
+		};
+
+		const auto currElemIndex = elems_.size() - 1;
+		currIndexes.insert(std::lower_bound(std::cbegin(currIndexes), std::cend(currIndexes), currElemIndex, compareByValues), currElemIndex);
+		++currIndex;
+		return true;
+	}
+
+	void insert_to_sorted(const T& value)
+	{
+		std::size_t currCompIndex = 0;
+		bool do_this[]{ for_every_of<Comparators>(currCompIndex)... };
+	}
+
+private:
+	inner_container_type elems_;
+	std::vector<std::vector<std::size_t>> sortedIndexes_;
+};
+
 
 #endif // !SORTED_VECTOR_HPP

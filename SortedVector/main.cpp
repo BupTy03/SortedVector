@@ -1,34 +1,36 @@
 #include "sorted_vector.hpp"
+#include "typelist_utils.hpp"
 
 #include <iostream>
 #include <random>
 #include <iterator>
 
+struct Vector {
+	Vector(int x, int y, int z) : x{x}, y{y}, z{z} {}
+
+	int x = 0;
+	int y = 0;
+	int z = 0;
+};
+
+struct CompareByX {
+	bool operator()(const Vector& left, const Vector& right) const { return left.x < right.x; }
+};
+
+struct CompareByY {
+	bool operator()(const Vector& left, const Vector& right) const { return left.y < right.y; }
+};
+
+struct CompareByZ {
+	bool operator()(const Vector& left, const Vector& right) const { return left.z < right.z; }
+};
+
 int main()
 {
-	std::random_device rd;
-	std::mt19937 gen(rd());
-	std::uniform_int_distribution<> dist(1, 100);
-
-	const auto rand_int_generator = [&dist, &gen] { return dist(gen); };
-
-	std::vector<int> vec(10);
-	std::generate(std::begin(vec), std::end(vec), rand_int_generator);
-
-	sorted_vector<int> sorted_vec;
-	for (int elem : vec) {
-		sorted_vec.insert(elem);
-	}
-
-	std::ostream_iterator<int> ostream_it{ std::cout, " " };
-
-	std::cout << "Array: ";
-	std::copy(std::cbegin(vec), std::cend(vec), ostream_it);
-	std::cout << std::endl;
-
-	std::cout << "Sorted array: ";
-	std::copy(std::cbegin(sorted_vec), std::cend(sorted_vec), ostream_it);
-	std::cout << std::endl;
+	sorted_vector<Vector, std::allocator<Vector>, CompareByX, CompareByY, CompareByZ> sortedVec;
+	sortedVec.emplace(3, 2, 1);
+	sortedVec.emplace(1, 2, 3);
+	sortedVec.emplace(0, 0, 0);
 
 	system("pause");
 	return 0;
