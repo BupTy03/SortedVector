@@ -37,5 +37,9 @@ using at_index_t = typename impl::at_index_impl<Index, Types...>::type;
 template<class Type, class... TypesPack>
 constexpr auto index_of_v = impl::index_of<Type, TypesPack...>::value;
 
+// count of types
+template<class... Types>
+constexpr auto count_of_v = sizeof...(Types);
+
 
 #endif // !TYPELIST_UTILS_HPP

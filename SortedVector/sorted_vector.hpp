@@ -157,20 +157,38 @@ public:
 	auto emplace(Args&&... args) { elems_.emplace_back(std::forward<Args>(args)...); update_sorted(); }
 
 	template<std::size_t index, typename VT>
-	T findByComparatorOrDefault(const VT& value, const T& defaultValue) const
+	auto find(const VT& value) const
 	{
-		at_index_t<index, Comparators...> comp;
+		using CurrentComp = at_index_t<index, Comparators...>;
+		CurrentComp comp;
 		const auto compareByValues = [this, comp](std::size_t leftIndex, const VT& value) {
-			std::cout << leftIndex << std::endl;
 			return comp(elems_.at(leftIndex), value);
 		};
 
-		const auto foundIndexIt = std::lower_bound(std::cbegin(sortedIndexes_.at(index)), std::cend(sortedIndexes_.at(index)), value, compareByValues);
-		return (foundIndexIt != std::cend(sortedIndexes_.at(index)) && !comp(elems_.at(*foundIndexIt), value)) ? elems_.at(*foundIndexIt) : defaultValue;
+		const auto& currSorted = sortedIndexes_.at(index);
+
+		const auto foundIndexIt = std::lower_bound(std::cbegin(currSorted), std::cend(currSorted), value, compareByValues);
+		const auto lastIndexIt = std::cend(currSorted);
+
+		return (foundIndexIt != lastIndexIt && !comp(elems_.at(*foundIndexIt), value))
+			? const_iterator<CurrentComp>(elems_, foundIndexIt) 
+			: const_iterator<CurrentComp>(elems_, lastIndexIt);
 	}
 
 	template<class Comp, typename VT, typename = std::enable_if_t<!std::is_same_v<Comp, std::size_t>>>
-	T findByComparatorOrDefault(const VT& value, const T& defaultValue) const  { return findByComparatorOrDefault<index_of_v<Comp, Comparators...>>(value, defaultValue); }
+	auto find(const VT& value) const { return find<index_of_v<Comp, Comparators...>>(value); }
+
+	template<class Comp, typename = std::enable_if_t<index_of_v<Comp, Comparators...> >= 0>>
+	auto cbegin() const { return const_iterator<Comp>(elems_, std::cbegin(sortedIndexes_.at(index_of_v<Comp, Comparators...>))); }
+
+	template<class Comp, typename = std::enable_if_t<index_of_v<Comp, Comparators...> >= 0>>
+	auto cend() const { return const_iterator<Comp>(elems_, std::cend(sortedIndexes_.at(index_of_v<Comp, Comparators...>))); }
+
+	template<class Comp>
+	auto begin() const { return cbegin<Comp>(); }
+
+	template<class Comp>
+	auto end() const { return cend<Comp>(); }
 
 private:
 	template<class CurrComp>
@@ -190,7 +208,6 @@ private:
 	}
 
 	void update_sorted() { insert_to_sorted(elems_.back()); }
-
 	void insert_to_sorted(const T& value)
 	{
 		std::size_t currCompIndex = 0;
@@ -218,12 +235,6 @@ private: // iterators
 	public:
 		explicit constexpr const_iterator_impl() = default;
 
-		//constexpr const_iterator_impl(const const_iterator_impl&) = default;
-		//constexpr const_iterator_impl& operator=(const const_iterator_impl&) = default;
-
-		//constexpr const_iterator_impl(const_iterator_impl&&) = default;
-		//constexpr const_iterator_impl& operator=(const_iterator_impl&&) = default;
-
 		constexpr const_iterator_impl& operator++() { ++currIndexIt_; return *this; }
 		constexpr const_iterator_impl operator++(int) { auto result = *this; ++(*this); return result; }
 
@@ -236,20 +247,20 @@ private: // iterators
 		constexpr const_iterator_impl& operator-=(difference_type shift) { currIndexIt_ -= shift; return *this; }
 		constexpr const_iterator_impl operator-(difference_type shift) const { auto result = *this; result -= shift; return result; }
 
-		constexpr difference_type operator-(const_iterator_impl other) const { return currIndexIt_ - other.currIndexIt_; }
+		constexpr difference_type operator-(const const_iterator_impl other) const { return currIndexIt_ - other.currIndexIt_; }
 
 		constexpr reference operator*() const { return pElems_->at(*currIndexIt_); }
 		constexpr pointer operator->() const { return &(pElems_->at(*currIndexIt_)); }
 		constexpr reference operator[](difference_type n) const { return *(*this + n); }
 
-		constexpr bool operator<(const_iterator_impl other) { return (*this - other) < 0; }
-		constexpr bool operator>(const_iterator_impl other) { return (*this - other) > 0; }
+		constexpr bool operator<(const_iterator_impl other) const { return (*this - other) < 0; }
+		constexpr bool operator>(const_iterator_impl other) const { return (*this - other) > 0; }
 
-		constexpr bool operator==(const_iterator_impl other) { return (*this - other) == 0; }
-		constexpr bool operator!=(const_iterator_impl other) { return !(*this == other); }
+		constexpr bool operator==(const_iterator_impl other) const { return (*this - other) == 0; }
+		constexpr bool operator!=(const_iterator_impl other) const { return !(*this == other); }
 
-		constexpr bool operator<=(const_iterator_impl other) { return !(*this > other); }
-		constexpr bool operator>=(const_iterator_impl other) { return !(*this < other); }
+		constexpr bool operator<=(const_iterator_impl other) const { return !(*this > other); }
+		constexpr bool operator>=(const_iterator_impl other) const { return !(*this < other); }
 
 	private:
 		const inner_container_type* pElems_ = nullptr;
@@ -260,5 +271,8 @@ private:
 	inner_container_type elems_;
 	std::vector<std::vector<std::size_t>> sortedIndexes_;
 };
+
+template<class T, class... Comparators>
+using SortedCollection = sorted_vector<T, std::allocator<T>, Comparators...>;
 
 #endif // !SORTED_VECTOR_HPP

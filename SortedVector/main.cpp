@@ -36,14 +36,27 @@ struct CompareByZ {
 
 int main()
 {
-	sorted_vector<Vector, std::allocator<Vector>, CompareByX, CompareByY, CompareByZ> sortedVec;
-	sortedVec.emplace(3, 2, 1);
-	sortedVec.emplace(1, 2, 3);
-	sortedVec.emplace(0, 0, 0);
+	SortedCollection<Vector, CompareByX, CompareByY, CompareByZ> sortedVec;
+	sortedVec.emplace(3, 1, 1);
+	sortedVec.emplace(2, 2, 10);
+	sortedVec.emplace(1, 3, 0);
 
-	const auto vec1 = sortedVec.findByComparatorOrDefault<CompareByX>(3, Vector{ 0, 0, 0 });
-	std::cout << "vec1: " << vec1 << std::endl;
+	const auto foundIt = sortedVec.find<CompareByX>(3);
+	if (foundIt != sortedVec.end<CompareByX>()) {
+		std::cout << "Found Vector: " << *foundIt << '\n' << std::endl;
+	}
 
+	std::cout << "Sorted by X:" << std::endl;
+	std::copy(sortedVec.begin<CompareByX>(), sortedVec.end<CompareByX>(), std::ostream_iterator<Vector>(std::cout, ",\n"));
+	std::cout << std::endl;
+
+	std::cout << "Sorted by Y:" << std::endl;
+	std::copy(sortedVec.begin<CompareByY>(), sortedVec.end<CompareByY>(), std::ostream_iterator<Vector>(std::cout, ",\n"));
+	std::cout << std::endl;
+
+	std::cout << "Sorted by Z:" << std::endl;
+	std::copy(sortedVec.begin<CompareByZ>(), sortedVec.end<CompareByZ>(), std::ostream_iterator<Vector>(std::cout, ",\n"));
+	std::cout << std::endl;
 
 	system("pause");
 	return 0;
