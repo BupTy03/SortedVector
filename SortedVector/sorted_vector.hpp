@@ -146,49 +146,76 @@ struct sorted_vector {
 	template<class CurrComp>
 	using const_reverse_iterator = std::reverse_iterator<const_iterator<CurrComp>>;
 
+private: // local traits
+	template<class Comp>
+	using contains_comp = std::enable_if_t<contains_v<Comp, Comparators...>>;
+
+	template<class Comp>
+	static constexpr auto index_of_comp = index_of_v<Comp, Comparators...>;
 
 public:
 	explicit sorted_vector() : sortedIndexes_{ sizeof...(Comparators) } {}
 
-	auto insert(const T& val) { elems_.push_back(val); update_sorted(); }
-	auto insert(T&& val) { elems_.push_back(std::move(val)); update_sorted(); }
+	void insert(const T& val) { elems_.push_back(val); update_sorted(); }
+	void insert(T&& val) { elems_.push_back(std::move(val)); update_sorted(); }
 
 	template<class... Args>
-	auto emplace(Args&&... args) { elems_.emplace_back(std::forward<Args>(args)...); update_sorted(); }
+	void emplace(Args&&... args) { elems_.emplace_back(std::forward<Args>(args)...); update_sorted(); }
 
-	template<std::size_t index, typename VT>
-	auto find(const VT& value) const
+	void reserve(size_type space)
 	{
-		using CurrentComp = at_index_t<index, Comparators...>;
-		CurrentComp comp;
+		if (space <= elems_.capacity()) {
+			return;
+		}
+
+		elems_.reserve(space);
+		for (auto& indexes : sortedIndexes_) {
+			indexes.reserve(space);
+		}
+	}
+
+	template<class Comp, typename VT, typename = contains_comp<Comp>>
+	auto find(const VT& value) const -> const_iterator<Comp>
+	{
+		Comp comp;
 		const auto compareByValues = [this, comp](std::size_t leftIndex, const VT& value) {
 			return comp(elems_.at(leftIndex), value);
 		};
 
-		const auto& currSorted = sortedIndexes_.at(index);
+		const auto& currSorted = sortedIndexes_.at(index_of_comp<Comp>);
 
 		const auto foundIndexIt = std::lower_bound(std::cbegin(currSorted), std::cend(currSorted), value, compareByValues);
 		const auto lastIndexIt = std::cend(currSorted);
 
 		return (foundIndexIt != lastIndexIt && !comp(elems_.at(*foundIndexIt), value))
-			? const_iterator<CurrentComp>(elems_, foundIndexIt) 
-			: const_iterator<CurrentComp>(elems_, lastIndexIt);
+			? const_iterator<Comp>(elems_, foundIndexIt)
+			: const_iterator<Comp>(elems_, lastIndexIt);
 	}
 
-	template<class Comp, typename VT, typename = std::enable_if_t<!std::is_same_v<Comp, std::size_t>>>
-	auto find(const VT& value) const { return find<index_of_v<Comp, Comparators...>>(value); }
+	template<class Comp, typename VT, typename = contains_comp<Comp>>
+	auto findAll(const VT& value) const -> std::pair<const_iterator<Comp>, const_iterator<Comp>>
+	{
+		const auto foundLowerBound = find<Comp>(value);
+		if (foundLowerBound == cend<Comp>()) {
+			return std::make_pair(foundLowerBound, foundLowerBound);
+		}
 
-	template<class Comp, typename = std::enable_if_t<index_of_v<Comp, Comparators...> >= 0>>
+		const auto foundIndexIt = foundLowerBound.currIndexIt_;
+		return std::make_pair(
+			// first in range of equal elems
+			const_iterator<Comp>(elems_, foundIndexIt),
+			// last(going after the last) in range of equal elems
+			const_iterator<Comp>(elems_, std::upper_bound(foundIndexIt, std::cend(sortedIndexes_.at(index_of_comp<Comp>)), *foundIndexIt)));
+	}
+
+	template<class Comp, typename = contains_comp<Comp>>
 	auto cbegin() const { return const_iterator<Comp>(elems_, std::cbegin(sortedIndexes_.at(index_of_v<Comp, Comparators...>))); }
 
-	template<class Comp, typename = std::enable_if_t<index_of_v<Comp, Comparators...> >= 0>>
+	template<class Comp, typename = contains_comp<Comp>>
 	auto cend() const { return const_iterator<Comp>(elems_, std::cend(sortedIndexes_.at(index_of_v<Comp, Comparators...>))); }
 
-	template<class Comp>
-	auto begin() const { return cbegin<Comp>(); }
-
-	template<class Comp>
-	auto end() const { return cend<Comp>(); }
+	template<class Comp> auto begin() const { return cbegin<Comp>(); }
+	template<class Comp> auto end() const { return cend<Comp>(); }
 
 private:
 	template<class CurrComp>
@@ -210,6 +237,8 @@ private:
 	void update_sorted() { insert_to_sorted(elems_.back()); }
 	void insert_to_sorted(const T& value)
 	{
+		// "No matter that code is ugly, if it works well."
+		// (C) Jason Statham
 		std::size_t currCompIndex = 0;
 		bool do_this[]{ for_every_of<Comparators>(currCompIndex)... };
 	}
