@@ -151,22 +151,21 @@ public:
 			return false;
 		}
 
-		const auto valIndex = it - std::cbegin(elems_);
+		const auto erasedIndex = it - std::cbegin(elems_);
 		elems_.erase(it);
 		for (auto& indexes : sortedIndexes_) {
-			auto nextIt = indexes.erase(std::find(std::cbegin(indexes), std::cend(indexes), valIndex));
+			indexes.erase(std::find(std::cbegin(indexes), std::cend(indexes), erasedIndex));
 			for (auto& index : indexes) {
-				if (index > valIndex)
+				if (index > erasedIndex) {
 					--index;
+				}
 			}
 		}
 		return true;
 	}
 	bool eraseAll(const T& val)
 	{
-		if (!erase(val)) {
-			return false;
-		}
+		if (!erase(val)) return false;
 		while (erase(val));
 		return true;
 	}
