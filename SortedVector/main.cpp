@@ -8,6 +8,9 @@
 struct Vector {
 	Vector(int x, int y, int z) : x{x}, y{y}, z{z} {}
 
+	bool operator==(const Vector& other) const { return x == other.x && y == other.y && z == other.z; }
+	bool operator!=(const Vector& other) const { return !(*this == other); }
+
 	int x = 0;
 	int y = 0;
 	int z = 0;
@@ -43,10 +46,15 @@ int main()
 	sortedVec.reserve(5);
 
 	sortedVec.emplace(3, 1, 1);
+	sortedVec.emplace(0, 0, 0);
 	sortedVec.emplace(2, 2, 10);
 	sortedVec.emplace(1, 3, 0);
+	sortedVec.emplace(0, 0, 0);
 	sortedVec.emplace(3, 4, 5);
 	sortedVec.emplace(3, 7, 1);
+	sortedVec.emplace(0, 0, 0);
+	sortedVec.emplace(1, 1, 1);
+
 
 	const auto foundIt = sortedVec.find<CompareByX>(3);
 	if (foundIt != sortedVec.end<CompareByX>()) {
@@ -67,12 +75,20 @@ int main()
 	std::copy(sortedVec.begin<CompareByX>(), sortedVec.end<CompareByX>(), std::ostream_iterator<Vector>(std::cout, ",\n"));
 	std::cout << std::endl;
 
+	sortedVec.erase({1, 1, 1});
+
 	std::cout << "Sorted by Y:" << std::endl;
 	std::copy(sortedVec.begin<CompareByY>(), sortedVec.end<CompareByY>(), std::ostream_iterator<Vector>(std::cout, ",\n"));
 	std::cout << std::endl;
 
+	sortedVec.eraseAll({ 0, 0, 0 });
+
 	std::cout << "Sorted by Z:" << std::endl;
 	std::copy(sortedVec.begin<CompareByZ>(), sortedVec.end<CompareByZ>(), std::ostream_iterator<Vector>(std::cout, ",\n"));
+	std::cout << std::endl;
+
+	std::cout << "Sorted by X in reverse:" << std::endl;
+	std::copy(sortedVec.rbegin<CompareByX>(), sortedVec.rend<CompareByX>(), std::ostream_iterator<Vector>(std::cout, ",\n"));
 	std::cout << std::endl;
 
 	system("pause");

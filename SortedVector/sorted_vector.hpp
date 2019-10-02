@@ -49,76 +49,58 @@ struct sorted_vector<T, Allocator, Comparator> {
 
 	auto insert(const T& val)
 	{
-		return cont_.insert(std::lower_bound(std::cbegin(cont_), std::cend(cont_), val, Comparator()), val);
+		return elems_.insert(std::lower_bound(std::cbegin(elems_), std::cend(elems_), val, Comparator()), val);
 	}
 
 	auto erase(const T& val)
 	{
-		auto it = std::lower_bound(std::cbegin(cont_), std::cend(cont_), val, Comparator());
-		if (*it == val) {
-			it = cont_.erase(it, val);
-		}
-		else {
-			it = std::cend(cont_);
-		}
-
-		return it;
+		Comparator comp;
+		const auto it = std::lower_bound(std::cbegin(elems_), std::cend(elems_), val, comp);
+		return (it != std::cend(elems_) && !comp(*it, val)) ? elems_.erase(it, val) : std::cend(elems_);
 	}
 
 	void eraseAll(const T& val)
 	{
-		auto itPair = std::equal_range(std::cbegin(cont_), std::cend(cont_), val, Comparator());
-		cont_.erase(itPair.first, itPair.second);
+		const auto itPair = std::equal_range(std::cbegin(elems_), std::cend(elems_), val, Comparator());
+		elems_.erase(itPair.first, itPair.second);
 	}
 
 	template<class It>
-	void assign(It first, It last) 
-	{ 
-		cont_.assign(first, last);
-		std::sort(std::begin(cont_), std::end(cont_)); 
-	}
+	void assign(It first, It last) { std::for_each(first, last, [this](const T& val) { insert(val); }); }
 
 	template<class Cont>
 	void assign(const Cont& other) { assign(std::cbegin(other), std::cend(other)); }
 
-	void clear() { cont_.clear(); }
-	bool empty() const { return cont_.empty(); }
+	void clear() { elems_.clear(); }
+	bool empty() const { return elems_.empty(); }
 
-	size_type size() const { return cont_.size(); }
-	size_type capacity() const { return cont_.capacity(); }
+	size_type size() const { return elems_.size(); }
+	size_type capacity() const { return elems_.capacity(); }
 
-	void reserve(size_type sz) { cont_.reserve(sz); }
-	void resize(size_type sz) { cont_.resize(sz); }
-	void resize(size_type sz, const T& val) { cont_.resize(sz, val); }
-	void shrink_to_fit() { cont_.shrink_to_fit(); }
+	void reserve(size_type sz) { elems_.reserve(sz); }
+	void shrink_to_fit() { elems_.shrink_to_fit(); }
 
-	const T& at(size_type index) const { return cont_.at(index); }
+	const T& at(size_type index) const { return elems_.at(index); }
 
-	auto cbegin() const { return cont_.cbegin(); }
-	auto cend() const { return cont_.cend(); }
+	auto cbegin() const { return elems_.cbegin(); }
+	auto cend() const { return elems_.cend(); }
 
 	auto begin() const { return cbegin(); }
 	auto end() const { return cend(); }
 
-	auto crbegin() const { return cont_.crbegin(); }
-	auto crend() const { return cont_.crend(); }
+	auto crbegin() const { return elems_.crbegin(); }
+	auto crend() const { return elems_.crend(); }
 
 	auto rbegin() const { return crbegin(); }
 	auto rend() const { return crend(); }
 
-	void swap(sorted_vector& other) { cont_.swap(other.cont_); }
+	void swap(sorted_vector& other) { elems_.swap(other.elems_); }
 
-	friend bool operator==(sorted_vector& left, sorted_vector& right) { return left.cont_ == right.cont_; }
-	friend bool operator!=(sorted_vector& left, sorted_vector& right) { return left.cont_ != right.cont_; }
-
-	friend bool operator<(sorted_vector& left, sorted_vector& right) { return left.cont_ < right.cont_; }
-	friend bool operator>=(sorted_vector& left, sorted_vector& right) { return left.cont_ >= right.cont_; }
-
-	friend bool operator>(sorted_vector& left, sorted_vector& right) { return left.cont_ > right.cont_; }
-	friend bool operator<=(sorted_vector& left, sorted_vector& right) { return left.cont_ <= right.cont_; }
+	bool operator==(const sorted_vector& other) const { return (elems_ == other.elems_); }
+	bool operator!=(const sorted_vector& other) const { return !(*this == other); }
 
 private:
-	inner_container_type cont_;
+	inner_container_type elems_;
 };
 
 
@@ -162,6 +144,33 @@ public:
 	template<class... Args>
 	void emplace(Args&&... args) { elems_.emplace_back(std::forward<Args>(args)...); update_sorted(); }
 
+	bool erase(const T& val)
+	{
+		const auto it = std::find(std::cbegin(elems_), std::cend(elems_), val);
+		if (it == std::cend(elems_)) {
+			return false;
+		}
+
+		const auto valIndex = it - std::cbegin(elems_);
+		elems_.erase(it);
+		for (auto& indexes : sortedIndexes_) {
+			auto nextIt = indexes.erase(std::find(std::cbegin(indexes), std::cend(indexes), valIndex));
+			for (auto& index : indexes) {
+				if (index > valIndex)
+					--index;
+			}
+		}
+		return true;
+	}
+	bool eraseAll(const T& val)
+	{
+		if (!erase(val)) {
+			return false;
+		}
+		while (erase(val));
+		return true;
+	}
+
 	void reserve(size_type space)
 	{
 		if (space <= elems_.capacity()) {
@@ -173,6 +182,28 @@ public:
 			indexes.reserve(space);
 		}
 	}
+	size_type capacity() { return elems_.capacity(); }
+
+	void shrink_to_fit()
+	{
+		if (capacity() == size()) {
+			return;
+		}
+
+		elems_.shrink_to_fit();
+		for (auto& indexes : sortedIndexes_) {
+			indexes.shrink_to_fit();
+		}
+	}
+
+	size_type size() const { return elems_.size(); }
+	bool empty() const { return elems_.empty(); }
+
+	template<class It>
+	void assign(It first, It last) { std::for_each(first, last, [this](const T& val) { insert(val); }); }
+
+	template<class Cont>
+	void assign(const Cont& other) { assign(std::cbegin(other), std::cend(other)); }
 
 	template<class Comp, typename VT, typename = contains_comp<Comp>>
 	auto find(const VT& value) const -> const_iterator<Comp>
@@ -208,6 +239,9 @@ public:
 			const_iterator<Comp>(elems_, std::upper_bound(foundIndexIt, std::cend(sortedIndexes_.at(index_of_comp<Comp>)), *foundIndexIt)));
 	}
 
+	template<class Comp, typename VT, typename = contains_comp<Comp>>
+	const T& at(size_type index) const { return elems_.at((sortedIndexes_.at(index_of_comp<Comp>)).at(index)); }
+
 	template<class Comp, typename = contains_comp<Comp>>
 	auto cbegin() const { return const_iterator<Comp>(elems_, std::cbegin(sortedIndexes_.at(index_of_v<Comp, Comparators...>))); }
 
@@ -216,6 +250,24 @@ public:
 
 	template<class Comp> auto begin() const { return cbegin<Comp>(); }
 	template<class Comp> auto end() const { return cend<Comp>(); }
+
+	template<class Comp>
+	auto crbegin() const -> std::reverse_iterator<const_iterator<Comp>> { return std::reverse_iterator<const_iterator<Comp>>(cend<Comp>()); }
+
+	template<class Comp>
+	auto crend() const -> std::reverse_iterator<const_iterator<Comp>> { return std::reverse_iterator<const_iterator<Comp>>(cbegin<Comp>()); }
+
+	template<class Comp>
+	auto rbegin() const { return crbegin<Comp>(); }
+
+	template<class Comp>
+	auto rend() const { return crend<Comp>(); }
+
+	void swap(sorted_vector& other)
+	{
+		std::swap(elems_, other.elems_);
+		std::swap(sortedIndexes_, other.sortedIndexes_);
+	}
 
 	template<class Comp, class It>
 	int compare(It first, It last) const
@@ -237,13 +289,40 @@ public:
 	template<class Comp, class Container>
 	int compare(const Container& cont) const { return compare<Comp>(std::cbegin(cont), std::cend(cont)); }
 
+	bool operator==(const sorted_vector& other) const
+	{
+		if (size() != other.size()) {
+			return false;
+		}
+
+		auto firstLeftIndexesIt = sortedIndexes_.cbegin();
+		const auto lastLeftIndexesIt = sortedIndexes_.cend();
+		if (firstLeftIndexesIt == lastLeftIndexesIt) {
+			return true;
+		}
+
+		for (auto currIndxIt = firstLeftIndexesIt->cbegin(); currIndxIt != firstLeftIndexesIt->cend(); ++currIndxIt) {
+			if (elems_.at(*currIndxIt) != other.elems_.at(*currIndxIt)) return false;
+		}
+
+		++firstLeftIndexesIt;
+		for (auto firstRightIndexesIt = std::next(other.sortedIndexes_.cbegin()); firstLeftIndexesIt != lastLeftIndexesIt; ++firstLeftIndexesIt, ++firstRightIndexesIt) {
+			if (!std::equal(firstLeftIndexesIt->cbegin(), firstLeftIndexesIt->cend(), firstRightIndexesIt->cbegin())) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+	bool operator!=(const sorted_vector& other) const { return !(*this == other); }
+
 private:
 	template<class CurrComp>
-	bool for_every_of(std::size_t& currIndex)
+	bool for_every_of(size_type& currIndex)
 	{
 		auto& currIndexes = sortedIndexes_.at(currIndex);
 
-		const auto compareByValues = [this](std::size_t left, std::size_t right) {
+		const auto compareByValues = [this](size_type left, size_type right) {
 			CurrComp comp;
 			return comp(elems_.at(left), elems_.at(right));
 		};
@@ -259,7 +338,7 @@ private:
 	{
 		// "No matter that code is ugly, if it works well."
 		// (C) Jason Statham
-		std::size_t currCompIndex = 0;
+		size_type currCompIndex = 0;
 		bool do_this[]{ for_every_of<Comparators>(currCompIndex)... };
 	}
 
@@ -318,7 +397,7 @@ private: // iterators
 
 private:
 	inner_container_type elems_;
-	std::vector<std::vector<std::size_t>> sortedIndexes_;
+	std::vector<std::vector<size_type>> sortedIndexes_;
 };
 
 template<class T, class... Comparators>
