@@ -208,7 +208,7 @@ public:
 	auto find(const VT& value) const -> const_iterator<Comp>
 	{
 		Comp comp;
-		const auto compareByValues = [this, comp](std::size_t leftIndex, const VT& value) {
+		const auto compareByValues = [this, comp](size_type leftIndex, const VT& value) {
 			return comp(elems_.at(leftIndex), value);
 		};
 
@@ -349,7 +349,7 @@ private: // iterators
 
 		friend class sorted_vector<T, Allocator, Comparators...>;
 	private:
-		explicit constexpr const_iterator_impl(const inner_container_type& pElems, std::vector<std::size_t>::const_iterator indexIt)
+		explicit constexpr const_iterator_impl(const inner_container_type& pElems, typename std::vector<size_type>::const_iterator indexIt)
 			: pElems_{ &pElems }, currIndexIt_{ indexIt } { assert(pElems_ != nullptr); }
 
 	public:
@@ -391,7 +391,7 @@ private: // iterators
 
 	private:
 		const inner_container_type* pElems_ = nullptr;
-		std::vector<std::size_t>::const_iterator currIndexIt_;
+		typename std::vector<size_type>::const_iterator currIndexIt_;
 	};
 
 private:
