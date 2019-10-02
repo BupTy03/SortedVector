@@ -21,17 +21,20 @@ std::ostream& operator<<(std::ostream& os, const Vector& vec)
 
 struct CompareByX {
 	bool operator()(const Vector& left, const Vector& right) const { return left.x < right.x; }
-	bool operator()(const Vector& left, int x) const { return left.x < x; }
+	bool operator()(const Vector& left, int right) const { return left.x < right; }
+	bool operator()(int left, const Vector& right) const { return left < right.x; }
 };
 
 struct CompareByY {
 	bool operator()(const Vector& left, const Vector& right) const { return left.y < right.y; }
-	bool operator()(const Vector& left, int y) const { return left.y < y; }
+	bool operator()(const Vector& left, int right) const { return left.y < right; }
+	bool operator()(int left, const Vector& right) const { return left < right.y; }
 };
 
 struct CompareByZ {
 	bool operator()(const Vector& left, const Vector& right) const { return left.z < right.z; }
-	bool operator()(const Vector& left, int z) const { return left.z < z; }
+	bool operator()(const Vector& left, int right) const { return left.z < right; }
+	bool operator()(int left, const Vector& right) const { return left < right.z; }
 };
 
 int main()
@@ -54,6 +57,11 @@ int main()
 	std::cout << "Found Vectors: " << std::endl;
 	std::copy(foundBounds.first, foundBounds.second, std::ostream_iterator<Vector>(std::cout, ",\n"));
 	std::cout << std::endl;
+
+	int arrX[] = { 1, 2, 3, 3, 3 };
+	if (sortedVec.compare<CompareByX>(arrX) == 0) {
+		std::cout << "sortedVec equal to arrX by X\n" << std::endl;
+	}
 
 	std::cout << "Sorted by X:" << std::endl;
 	std::copy(sortedVec.begin<CompareByX>(), sortedVec.end<CompareByX>(), std::ostream_iterator<Vector>(std::cout, ",\n"));

@@ -217,6 +217,26 @@ public:
 	template<class Comp> auto begin() const { return cbegin<Comp>(); }
 	template<class Comp> auto end() const { return cend<Comp>(); }
 
+	template<class Comp, class It>
+	int compare(It first, It last) const
+	{ 
+		Comp comp;
+
+		auto thisFirst = begin<Comp>();
+		const auto thisLast = end<Comp>();
+		for (; (first != last) && (thisFirst != thisLast); ++first, ++thisFirst) {
+			if (comp(*first, *thisFirst)) return -1;
+			if (comp(*thisFirst, *first)) return 1;
+		}
+
+		return (first == last && thisFirst == thisLast)
+			? 0
+			: (first == last && thisFirst != thisLast) ? -1 : 1;
+	}
+
+	template<class Comp, class Container>
+	int compare(const Container& cont) const { return compare<Comp>(std::cbegin(cont), std::cend(cont)); }
+
 private:
 	template<class CurrComp>
 	bool for_every_of(std::size_t& currIndex)
@@ -246,8 +266,8 @@ private:
 private: // iterators
 
 	template<class CurrComp>
-	class const_iterator_impl : public std::iterator<std::random_access_iterator_tag, T, std::ptrdiff_t, const T*, const T&> {
-		using base_type = std::iterator<std::random_access_iterator_tag, T, std::ptrdiff_t, const T*, const T&>;
+	class const_iterator_impl : public std::iterator<std::random_access_iterator_tag, value_type, difference_type, const_pointer, const_reference> {
+		using base_type = std::iterator<std::random_access_iterator_tag, value_type, difference_type, const_pointer, const_reference>;
 
 		friend class sorted_vector<T, Allocator, Comparators...>;
 	private:
