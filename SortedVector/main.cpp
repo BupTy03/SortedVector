@@ -1,7 +1,9 @@
 #include "sorted_vector.hpp"
 #include "typelist_utils.hpp"
+#include "registry.hpp"
 
 #include <iostream>
+#include <string>
 #include <random>
 #include <iterator>
 
@@ -42,6 +44,23 @@ struct CompareByZ {
 
 int main()
 {
+	registry<std::string> reg;
+	const auto apple_id = reg.append("apple");
+	const auto pen_id = reg.append("pen");
+	const auto apple_pen_id = reg.append("apple-pen");
+
+	const auto printLine = [] (const std::string& str) { std::cout << '\"' << str << '\"' << std::endl; };
+
+	std::cout << "reg: " << std::endl;
+	reg.for_each(printLine);
+	std::cout << std::endl;
+
+	reg.erase(apple_pen_id);
+	std::cout << "reg after erasing \"apple-pen\": " << std::endl;
+	reg.for_each(printLine);
+	std::cout << std::endl;
+
+#if 0
 	SortedCollection<Vector, CompareByX, CompareByY, CompareByZ> sortedVec;
 	sortedVec.reserve(5);
 
@@ -90,6 +109,7 @@ int main()
 	std::cout << "Sorted by X in reverse:" << std::endl;
 	std::copy(sortedVec.rbegin<CompareByX>(), sortedVec.rend<CompareByX>(), std::ostream_iterator<Vector>(std::cout, ",\n"));
 	std::cout << std::endl;
+#endif
 
 	system("pause");
 	return 0;

@@ -326,20 +326,18 @@ private:
 
 private: // iterators
 	template<class CurrComp>
-	class const_iterator_impl : public std::iterator<std::random_access_iterator_tag, value_type, difference_type, const_pointer, const_reference> {
-		using base_type = std::iterator<std::random_access_iterator_tag, value_type, difference_type, const_pointer, const_reference>;
-
+	class const_iterator_impl {
 		friend class sorted_vector<T, Allocator, Comparators...>;
 	private:
 		explicit constexpr const_iterator_impl(const inner_container_type& pElems, typename std::vector<size_type>::const_iterator indexIt)
 			: pElems_{ &pElems }, currIndexIt_{ indexIt } { assert(pElems_ != nullptr); }
 
 	public:
-		using iterator_category = typename base_type::iterator_category;
-		using value_type = typename base_type::value_type;
-		using difference_type = typename base_type::difference_type;
-		using pointer = typename base_type::pointer;
-		using reference = typename base_type::reference;
+		using iterator_category = std::random_access_iterator_tag;
+		using value_type = value_type;
+		using difference_type = difference_type;
+		using pointer = const_pointer;
+		using reference = const_reference;
 
 	public:
 		explicit constexpr const_iterator_impl() = default;
