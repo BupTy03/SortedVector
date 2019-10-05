@@ -2,26 +2,12 @@
 #ifndef REGISTRY_HPP
 #define REGISTRY_HPP
 
+#include "algorithms_utils.hpp"
+
 #include <vector>
 #include <utility>
 #include <optional>
 #include <algorithm>
-
-struct ComparePairByFirst {
-	template<class TypeFirst, class TypeSecond>
-	bool operator()(const TypeFirst& left, const std::pair<TypeFirst, TypeSecond>& right) const { return left < right.first; }
-
-	template<class TypeFirst, class TypeSecond>
-	bool operator()(const std::pair<TypeFirst, TypeSecond>& left, const TypeFirst& right) const { return left.first < right; }
-};
-
-struct ComparePairBySecond {
-	template<class TypeFirst, class TypeSecond>
-	bool operator()(const TypeSecond& left, const std::pair<TypeFirst, TypeSecond>& right) const { return left < right.second; }
-
-	template<class TypeFirst, class TypeSecond>
-	bool operator()(const std::pair<TypeFirst, TypeSecond>& left, const TypeSecond& right) const { return left.second < right; }
-};
 
 
 template<class T>

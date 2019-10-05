@@ -3,42 +3,12 @@
 #define SORTED_VECTOR_HPP
 
 #include "typelist_utils.hpp"
+#include "algorithms_utils.hpp"
 
 #include <vector>
 #include <algorithm>
 #include <cassert>
 #include <set>
-
-
-template<class ForwardIt, class T, class Compare = std::less<>>
-ForwardIt binary_find(ForwardIt first, ForwardIt last, const T& value, Compare comp = {})
-{
-	first = std::lower_bound(first, last, value, comp);
-	return first != last && !comp(value, *first) ? first : last;
-}
-
-template<class Container, class T, class Compare = std::less<>>
-auto binary_find(Container& cont, const T& value, Compare comp = {}){ return binary_find(std::begin(cont), std::end(cont), value, comp); }
-
-template<class Container, class T, class Compare = std::less<>>
-auto binary_find(const Container& cont, const T& value, Compare comp = {}){ return binary_find(std::cbegin(cont), std::cend(cont), value, comp); }
-
-template<class ForwardIt, class T, class Compare = std::less<>>
-auto binary_find_range(ForwardIt first, ForwardIt last, const T& value, Compare comp = {})
-{
-	first = std::lower_bound(first, last, value, comp);
-	if (first == last || comp(value, *first)) {
-		return std::make_pair(last, last);
-	}
-
-	return std::make_pair(first, std::upper_bound(first, last, value, comp));
-}
-
-template<class Container, class T, class Compare = std::less<>>
-auto binary_find_range(Container& cont, const T& value, Compare comp = {}) { return binary_find_range(std::begin(cont), std::end(cont), value, comp); }
-
-template<class Container, class T, class Compare = std::less<>>
-auto binary_find_range(const Container& cont, const T& value, Compare comp = {}) { return binary_find_range(std::cbegin(cont), std::cend(cont), value, comp); }
 
 
 template<class T, class Allocator, class... Comparators>
@@ -314,13 +284,10 @@ private:
 
 		std::set<size_type> result;
 		for (const auto currIters : pairs_arr) {
-			for (auto it = currIters.first; it != currIters.second; ++it) {
-				if (elems_.at(*it) == value) {
-					result.emplace(*it);
-				}
-			}
+			std::for_each(currIters.first, currIters.second, [&result](auto index) { result.emplace(index); });
 		}
 
+		remove_if(result, [this, &value](auto index) { return elems_.at(index) != value; });
 		return result;
 	}
 

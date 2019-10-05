@@ -1,11 +1,14 @@
-#include "sorted_vector.hpp"
-#include "typelist_utils.hpp"
-#include "registry.hpp"
+//#include "sorted_vector.hpp"
+//#include "typelist_utils.hpp"
+//#include "registry.hpp"
+#include "assoc_vector.hpp"
 
 #include <iostream>
 #include <string>
 #include <random>
 #include <iterator>
+#include <map>
+#include <string>
 
 struct Vector {
 	Vector(int x, int y, int z) : x{x}, y{y}, z{z} {}
@@ -44,21 +47,14 @@ struct CompareByZ {
 
 int main()
 {
-	registry<std::string> reg;
-	const auto apple_id = reg.append("apple");
-	const auto pen_id = reg.append("pen");
-	const auto apple_pen_id = reg.append("apple-pen");
+	assoc_vector<std::string, int> assocVec;
+	assocVec["pen"] = 8;
+	assocVec["apple"] = 3;
+	assocVec["apple-pen"] = 12;
 
-	const auto printLine = [] (const std::string& str) { std::cout << '\"' << str << '\"' << std::endl; };
-
-	std::cout << "reg: " << std::endl;
-	reg.for_each(printLine);
-	std::cout << std::endl;
-
-	reg.erase(apple_pen_id);
-	std::cout << "reg after erasing \"apple-pen\": " << std::endl;
-	reg.for_each(printLine);
-	std::cout << std::endl;
+	std::cout << "Pen: " << assocVec["pen"] << std::endl;
+	std::cout << "Apple: " << assocVec["apple"] << std::endl;
+	std::cout << "Apple-Pen: " << assocVec["apple-pen"] << std::endl;
 
 #if 0
 	SortedCollection<Vector, CompareByX, CompareByY, CompareByZ> sortedVec;
@@ -108,6 +104,24 @@ int main()
 
 	std::cout << "Sorted by X in reverse:" << std::endl;
 	std::copy(sortedVec.rbegin<CompareByX>(), sortedVec.rend<CompareByX>(), std::ostream_iterator<Vector>(std::cout, ",\n"));
+	std::cout << std::endl;
+#endif
+
+#if 0
+	registry<std::string> reg;
+	const auto apple_id = reg.append("apple");
+	const auto pen_id = reg.append("pen");
+	const auto apple_pen_id = reg.append("apple-pen");
+
+	const auto printLine = [](const std::string& str) { std::cout << '\"' << str << '\"' << std::endl; };
+
+	std::cout << "reg: " << std::endl;
+	reg.for_each(printLine);
+	std::cout << std::endl;
+
+	reg.erase(apple_pen_id);
+	std::cout << "reg after erasing \"apple-pen\": " << std::endl;
+	reg.for_each(printLine);
 	std::cout << std::endl;
 #endif
 
