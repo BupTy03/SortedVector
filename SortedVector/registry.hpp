@@ -2,6 +2,7 @@
 #ifndef REGISTRY_HPP
 #define REGISTRY_HPP
 
+#include "key_value_pair_adapters.hpp"
 #include "algorithms_utils.hpp"
 
 #include <vector>
@@ -26,7 +27,7 @@ public:
 	}
 
 	void erase(std::size_t id) {
-		const auto p = std::lower_bound(std::begin(elems_), std::end(elems_), id, ComparePairByFirst());
+		const auto p = std::lower_bound(std::begin(elems_), std::end(elems_), id, ComparePairByFirst<>());
 		if (p == std::end(elems_) || p->first != id) { return; }
 
 		p->second.reset();
@@ -38,14 +39,14 @@ public:
 	}
 
 	T* find(std::size_t id) {
-		const auto p = std::lower_bound(std::begin(elems_), std::end(elems_), id, ComparePairByFirst());
+		const auto p = std::lower_bound(std::begin(elems_), std::end(elems_), id, ComparePairByFirst<>());
 		if (p == std::end(elems_) || p->first != id) { return nullptr; }
 
 		return &(*p->second);
 	}
 
 	const T* find(std::size_t id) const {
-		const auto p = std::lower_bound(std::cbegin(elems_), std::cend(elems_), id, ComparePairByFirst());
+		const auto p = std::lower_bound(std::cbegin(elems_), std::cend(elems_), id, ComparePairByFirst<>());
 		if (p == std::cend(elems_) || p->first != id) { return nullptr; }
 
 		return &(*p->second);

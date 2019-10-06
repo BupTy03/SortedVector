@@ -35,5 +35,8 @@
     <ClInclude Include="algorithms_utils.hpp">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
+    <ClInclude Include="key_value_pair_adapters.hpp">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

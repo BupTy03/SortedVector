@@ -122,6 +122,7 @@
   <ItemGroup>
     <ClInclude Include="algorithms_utils.hpp" />
     <ClInclude Include="assoc_vector.hpp" />
+    <ClInclude Include="key_value_pair_adapters.hpp" />
     <ClInclude Include="registry.hpp" />
     <ClInclude Include="sorted_vector.hpp" />
     <ClInclude Include="typelist_utils.hpp" />

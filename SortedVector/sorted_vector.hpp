@@ -43,6 +43,7 @@ private: // local traits
 	static constexpr auto index_of_comp = index_of_v<Comp, Comparators...>;
 
 	static constexpr auto count_comparators = sizeof...(Comparators);
+	static_assert(count_comparators <= 0, "Comparators for type T are not provided");
 
 public:
 	explicit sorted_vector() : sortedIndexes_{ count_comparators } {}

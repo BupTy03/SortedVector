@@ -56,6 +56,10 @@ int main()
 	std::cout << "Apple: " << assocVec["apple"] << std::endl;
 	std::cout << "Apple-Pen: " << assocVec["apple-pen"] << std::endl;
 
+	for (auto&& keyValue : assocVec) {
+		std::cout << "Key: " << keyValue.first << ", Value: " << keyValue.second << std::endl;
+	}
+
 #if 0
 	SortedCollection<Vector, CompareByX, CompareByY, CompareByZ> sortedVec;
 	sortedVec.reserve(5);

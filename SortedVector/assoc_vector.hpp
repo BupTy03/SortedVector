@@ -2,6 +2,7 @@
 #ifndef ASSOC_VECTOR_HPP
 #define ASSOC_VECTOR_HPP
 
+#include "key_value_pair_adapters.hpp"
 #include "algorithms_utils.hpp"
 
 #include <utility>
@@ -16,21 +17,29 @@ template<
 	class Comparator = std::less<Key>, 
 	class Allocator = std::allocator<std::pair<Key, T>>
 >
-struct assoc_vector {
-	using inner_container_type = std::vector<std::pair<Key, T>, Allocator>;
+class assoc_vector {
+	class iterator_adapter_impl;
+	class const_iterator_adapter_impl;
 
-	using value_type = typename inner_container_type::value_type;
-	using allocator_type = typename inner_container_type::allocator_type;
-	using size_type	= typename inner_container_type::size_type;
-	using difference_type = typename inner_container_type::difference_type;
-	using reference = typename inner_container_type::reference;
-	using const_reference = typename inner_container_type::const_reference;
-	using pointer = typename inner_container_type::pointer;
-	using const_pointer = typename inner_container_type::const_pointer;
-	using iterator = typename inner_container_type::iterator;
-	using const_iterator = typename inner_container_type::const_iterator;
-	using reverse_iterator = typename inner_container_type::reverse_iterator;
-	using const_reverse_iterator = typename inner_container_type::const_reverse_iterator;
+public:
+	using container_type = std::vector<std::pair<Key, T>, Allocator>;
+
+	using value_type = typename container_type::value_type;
+	using allocator_type = typename container_type::allocator_type;
+	using size_type	= typename container_type::size_type;
+	using difference_type = typename container_type::difference_type;
+
+	using reference = KeyValuePairRef<Key, T>;
+	using const_reference = typename container_type::const_reference;
+
+	using pointer = KeyValuePairPtr<Key, T>;
+	using const_pointer = typename container_type::const_pointer;
+
+	using iterator = iterator_adapter_impl;
+	using const_iterator = const_iterator_adapter_impl;
+
+	using reverse_iterator = std::reverse_iterator<iterator>;
+	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
 	T& at(const Key& key)
 	{
@@ -53,7 +62,7 @@ struct assoc_vector {
 		CompareFirstAdapter<Comparator> comp;
 		auto it = std::lower_bound(std::begin(elems_), std::end(elems_), key, comp);
 		if (it == std::end(elems_) || comp(key, *it)) {
-			it = this->emplace_hint(it, key, T());
+			return this->emplace_hint(const_iterator(it), key, T())->second;
 		}
 
 		assert(it != std::end(elems_));
@@ -64,7 +73,7 @@ struct assoc_vector {
 	std::pair<iterator, bool> insert(const value_type& value)
 	{
 		const auto it = std::lower_bound(std::begin(elems_), std::end(elems_), value, CompareFirstAdapter<Comparator>());
-		return std::make_pair(elems_.insert(it, value), true);
+		return std::make_pair(iterator(elems_.insert(it, value)), true);
 	}
 	iterator insert(const_iterator hint, const value_type& value)
 	{
@@ -80,7 +89,7 @@ struct assoc_vector {
 			(hint == first && comp(value, *hint)) ||									// if value is less than first
 			(!comp(value, *(std::prev(hint))) && comp(value, *hint)))					// if value is less than hint and not less than prev
 		{
-			return elems_.insert(hint, value);
+			return iterator(elems_.insert(hint, value));
 		}
 		
 		return this->insert(value).first;
@@ -99,12 +108,14 @@ struct assoc_vector {
 	{
 		value_type value(std::forward<Args>(args)...);
 		const auto it = std::lower_bound(std::begin(elems_), std::end(elems_), value, CompareFirstAdapter<Comparator>());
-		return std::make_pair(elems_.insert(it, std::move(value)), true);
+		return std::make_pair(iterator(elems_.insert(it, std::move(value))), true);
 	}
 	template<class... Args>
 	iterator emplace_hint(const_iterator hint, Args&&... args)
 	{
-		if (hint < std::cbegin(elems_) || hint > std::cend(elems_)) {
+		auto elems_hint = hint.it_;
+
+		if (elems_hint < std::cbegin(elems_) || elems_hint > std::cend(elems_)) {
 			throw std::out_of_range{ "iterator is out of range" };
 		}
 
@@ -114,11 +125,11 @@ struct assoc_vector {
 
 		value_type value(std::forward<Args>(args)...);
 
-		if ((hint == last && (hint == first || !comp(value, *(std::prev(hint))))) ||	// if no elems or value isn't less than prev element of last
-			(hint == first && comp(value, *hint)) ||									// if value is less than first
-			(!comp(value, *(std::prev(hint))) && comp(value, *hint)))					// if value is less than hint and not less than prev
+		if ((elems_hint == last && (elems_hint == first || !comp(value, *(std::prev(elems_hint))))) ||	// if no elems or value isn't less than prev element of last
+			(elems_hint == first && comp(value, *elems_hint)) ||									// if value is less than first
+			(!comp(value, *(std::prev(elems_hint))) && comp(value, *elems_hint)))					// if value is less than hint and not less than prev
 		{
-			return elems_.insert(hint, std::move(value));
+			return iterator(elems_.insert(elems_hint, std::move(value)));
 		}
 
 		return this->insert(value).first;
@@ -127,25 +138,29 @@ struct assoc_vector {
 	iterator erase(const value_type& value)
 	{
 		auto it = binary_find(elems_, value, CompareFirstAdapter<Comparator>());
-		return (it != std::end(elems_)) ? elems_.erase(it) : it;
+		return iterator((it != std::end(elems_)) ? elems_.erase(it) : it);
 	}
 	void eraseAll(const value_type& value)
 	{
 		const auto itPair = std::equal_range(std::cbegin(elems_), std::cend(elems_), value, CompareFirstAdapter<Comparator>());
-		elems_.erase(itPair.first, itPair.second);
+		iterator(elems_.erase(itPair.first, itPair.second));
 	}
 
-	iterator find(const Key& key) { return binary_find(elems_, key, CompareFirstAdapter<Comparator>()); }
-	const_iterator find(const Key& key) const { return binary_find(elems_, key, CompareFirstAdapter<Comparator>()); }
+	iterator find(const Key& key) { return iterator(binary_find(elems_, key, CompareFirstAdapter<Comparator>())); }
+	const_iterator find(const Key& key) const { return const_iterator(binary_find(elems_, key, CompareFirstAdapter<Comparator>())); }
 
-	std::pair<iterator, iterator> equal_range(const Key& key) { return std::equal_range(std::begin(elems_), std::end(elems_), key, CompareFirstAdapter<Comparator>()); }
-	std::pair<const_iterator, const_iterator> equal_range(const Key& key) const { return std::equal_range(std::cbegin(elems_), std::cend(elems_), key, CompareFirstAdapter<Comparator>()); }
+	std::pair<iterator, iterator> equal_range(const Key& key) 
+	{ 
+		auto result = std::equal_range(std::begin(elems_), std::end(elems_), key, CompareFirstAdapter<Comparator>());
+		return std::make_pair(iterator(result.first), iterator(result.second));
+	}
+	std::pair<const_iterator, const_iterator> equal_range(const Key& key) const { return const_iterator(std::equal_range(std::cbegin(elems_), std::cend(elems_), key, CompareFirstAdapter<Comparator>())); }
 
-	iterator lower_bound(const Key& key) { return std::lower_bound(std::begin(elems_), std::end(elems_), key, CompareFirstAdapter<Comparator>()); }
-	const_iterator lower_bound(const Key& key) const { return std::lower_bound(std::cbegin(elems_), std::cend(elems_), key, CompareFirstAdapter<Comparator>()); }
+	iterator lower_bound(const Key& key) { return iterator(std::lower_bound(std::begin(elems_), std::end(elems_), key, CompareFirstAdapter<Comparator>())); }
+	const_iterator lower_bound(const Key& key) const { return const_iterator(std::lower_bound(std::cbegin(elems_), std::cend(elems_), key, CompareFirstAdapter<Comparator>())); }
 
-	iterator upper_bound(const Key& key) { return std::upper_bound(std::begin(elems_), std::end(elems_), key, CompareFirstAdapter<Comparator>()); }
-	const_iterator upper_bound(const Key& key) const { return std::upper_bound(std::cbegin(elems_), std::cend(elems_), key, CompareFirstAdapter<Comparator>()); }
+	iterator upper_bound(const Key& key) { return iterator(std::upper_bound(std::begin(elems_), std::end(elems_), key, CompareFirstAdapter<Comparator>())); }
+	const_iterator upper_bound(const Key& key) const { return const_iterator(std::upper_bound(std::cbegin(elems_), std::cend(elems_), key, CompareFirstAdapter<Comparator>())); }
 
 	template<class It>
 	void assign(It first, It last)
@@ -169,24 +184,25 @@ struct assoc_vector {
 	void shrink_to_fit() { elems_.shrink_to_fit(); }
 
 	const T& at_index(size_type index) const { return elems_.at(index); }
+	T& at_index(size_type index) { return elems_.at(index); }
 
-	auto begin() { return elems_.begin(); }
-	auto end() { return elems_.end(); }
+	iterator begin() { return iterator(elems_.begin()); }
+	iterator end() { return iterator(elems_.end()); }
 
-	auto cbegin() const { return elems_.cbegin(); }
-	auto cend() const { return elems_.cend(); }
+	const_iterator cbegin() const { return const_iterator(elems_.cbegin()); }
+	const_iterator cend() const { return const_iterator(elems_.cend()); }
 
-	auto begin() const { return cbegin(); }
-	auto end() const { return cend(); }
+	const_iterator begin() const { return cbegin(); }
+	const_iterator end() const { return cend(); }
 
-	auto rbegin() { return elems_.rbegin(); }
-	auto rend() { return elems_.rend(); }
+	reverse_iterator rbegin() { return reverse_iterator(iterator(elems_.end())); }
+	reverse_iterator rend() { return reverse_iterator(iterator(elems_.begin())); }
 
-	auto crbegin() const { return elems_.crbegin(); }
-	auto crend() const { return elems_.crend(); }
+	const_reverse_iterator crbegin() const { return const_reverse_iterator(const_iterator(elems_.crbegin())); }
+	const_reverse_iterator crend() const { return const_reverse_iterator(const_iterator(elems_.crend())); }
 
-	auto rbegin() const { return crbegin(); }
-	auto rend() const { return crend(); }
+	const_reverse_iterator rbegin() const { return crbegin(); }
+	const_reverse_iterator rend() const { return crend(); }
 
 	friend bool operator==(assoc_vector& left, assoc_vector& right) { return left.elems_ == right.elems_; }
 	friend bool operator!=(assoc_vector& left, assoc_vector& right) { return left.elems_ != right.elems_; }
@@ -197,8 +213,105 @@ struct assoc_vector {
 	friend bool operator>(assoc_vector& left, assoc_vector& right) { return left.elems_ > right.elems_; }
 	friend bool operator<=(assoc_vector& left, assoc_vector& right) { return left.elems_ <= right.elems_; }
 
+private: // iterators implementation
+	class iterator_adapter_impl {
+		friend class assoc_vector<Key, T, Comparator, Allocator>;
+		friend class const_iterator_adapter_impl;
+
+	public:
+		using iterator_category = std::random_access_iterator_tag;
+		using value_type = typename container_type::iterator::value_type;
+		using difference_type = typename container_type::iterator::difference_type;
+		using pointer = KeyValuePairPtr<Key, T>;
+		using reference = KeyValuePairRef<Key, T>;
+
+	private:
+		explicit iterator_adapter_impl(typename container_type::iterator it) : it_{ it } {}
+
+	public:
+		explicit iterator_adapter_impl() = default;
+
+		iterator_adapter_impl& operator++() { ++it_; return *this; }
+		iterator_adapter_impl operator++(int) { auto result = *this; ++(*this); return result; }
+
+		iterator_adapter_impl& operator--() { --it_; return *this; }
+		iterator_adapter_impl operator--(int) { auto result = *this; --(*this); return result; }
+
+		iterator_adapter_impl& operator+=(difference_type shift) { it_ += shift; return *this; }
+		iterator_adapter_impl operator+(difference_type shift) const { auto result = *this; result += shift; return result; }
+
+		iterator_adapter_impl& operator-=(difference_type shift) { it_ -= shift; return *this; }
+		iterator_adapter_impl operator-(difference_type shift) const { auto result = *this; result -= shift; return result; }
+
+		difference_type operator-(iterator_adapter_impl other) const { return it_ - other.it_; }
+
+		reference operator*() const { return reference{ *it_ }; }
+		pointer operator->() const { return pointer{ *it_ }; }
+		reference operator[](difference_type n) const { return *(*this + n); }
+
+		bool operator<(iterator_adapter_impl other) { return (*this - other) < 0; }
+		bool operator>(iterator_adapter_impl other) { return (*this - other) > 0; }
+
+		bool operator==(iterator_adapter_impl other) { return (*this - other) == 0; }
+		bool operator!=(iterator_adapter_impl other) { return !(*this == other); }
+
+		bool operator<=(iterator_adapter_impl other) { return !(*this > other); }
+		bool operator>=(iterator_adapter_impl other) { return !(*this < other); }
+
+	private:
+		typename container_type::iterator it_;
+	};
+
+	class const_iterator_adapter_impl {
+		friend class assoc_vector<Key, T, Comparator, Allocator>;
+
+	public:
+		using iterator_category = std::random_access_iterator_tag;
+		using value_type = typename container_type::const_iterator::value_type;
+		using difference_type = typename container_type::const_iterator::difference_type;
+		using pointer = typename container_type::const_iterator::pointer;
+		using reference = typename container_type::const_iterator::reference;
+
+	private:
+		explicit const_iterator_adapter_impl(typename container_type::const_iterator it) : it_{ it } {}
+
+	public:
+		explicit const_iterator_adapter_impl() = default;
+		explicit const_iterator_adapter_impl(iterator_adapter_impl it) : it_{it.it_} { }
+
+		const_iterator_adapter_impl& operator++() { ++it_; return *this; }
+		const_iterator_adapter_impl operator++(int) { auto result = *this; ++(*this); return result; }
+
+		const_iterator_adapter_impl& operator--() { --it_; return *this; }
+		const_iterator_adapter_impl operator--(int) { auto result = *this; --(*this); return result; }
+
+		const_iterator_adapter_impl& operator+=(difference_type shift) { it_ += shift; return *this; }
+		const_iterator_adapter_impl operator+(difference_type shift) const { auto result = *this; result += shift; return result; }
+
+		const_iterator_adapter_impl& operator-=(difference_type shift) { it_ -= shift; return *this; }
+		const_iterator_adapter_impl operator-(difference_type shift) const { auto result = *this; result -= shift; return result; }
+
+		difference_type operator-(const_iterator_adapter_impl other) const { return it_ - other.it_; }
+
+		reference operator*() const { return reference{ *it_ }; }
+		pointer operator->() const { return &(*it_); }
+		reference operator[](difference_type n) const { return *(*this + n); }
+
+		bool operator<(const_iterator_adapter_impl other) { return (*this - other) < 0; }
+		bool operator>(const_iterator_adapter_impl other) { return (*this - other) > 0; }
+
+		bool operator==(const_iterator_adapter_impl other) { return (*this - other) == 0; }
+		bool operator!=(const_iterator_adapter_impl other) { return !(*this == other); }
+
+		bool operator<=(const_iterator_adapter_impl other) { return !(*this > other); }
+		bool operator>=(const_iterator_adapter_impl other) { return !(*this < other); }
+
+	private:
+		typename container_type::const_iterator it_;
+	};
+
 private:
-	inner_container_type elems_;
+	container_type elems_;
 };
 
 #endif // !ASSOC_VECTOR_HPP

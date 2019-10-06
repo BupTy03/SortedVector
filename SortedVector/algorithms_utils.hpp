@@ -8,43 +8,6 @@
 #include <set>
 
 
-template<class Comp>
-struct CompareFirstAdapter {
-	template<class First, class Second>
-	bool operator()(const std::pair<First, Second>& left, const std::pair<First, Second>& right) const {
-		return comp_(left.first, right.first);
-	}
-
-	template<class First, class Second>
-	bool operator()(const std::pair<First, Second>& left, const First& right) const {		
-		return comp_(left.first, right);
-	}
-
-	template<class First, class Second>
-	bool operator()(const First& left, const std::pair<First, Second>& right) const {
-		return comp_(left, right.first);
-	}
-
-private:
-	Comp comp_;
-};
-
-struct ComparePairByFirst {
-	template<class TypeFirst, class TypeSecond>
-	bool operator()(const TypeFirst& left, const std::pair<TypeFirst, TypeSecond>& right) const { return left < right.first; }
-
-	template<class TypeFirst, class TypeSecond>
-	bool operator()(const std::pair<TypeFirst, TypeSecond>& left, const TypeFirst& right) const { return left.first < right; }
-};
-
-struct ComparePairBySecond {
-	template<class TypeFirst, class TypeSecond>
-	bool operator()(const TypeSecond& left, const std::pair<TypeFirst, TypeSecond>& right) const { return left < right.second; }
-
-	template<class TypeFirst, class TypeSecond>
-	bool operator()(const std::pair<TypeFirst, TypeSecond>& left, const TypeSecond& right) const { return left.second < right; }
-};
-
 template<class ForwardIt, class T, class Compare = std::less<>>
 ForwardIt binary_find(ForwardIt first, ForwardIt last, const T& value, Compare comp = {})
 {
